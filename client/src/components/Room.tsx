@@ -50,9 +50,11 @@ export const Room: React.FC = () => {
 
   // ── Local note handlers ────────────────────────────────────────────
   const handleLocalNoteOn = useCallback((midi: number, velocity: number = 80) => {
-    // loadAudio is synchronous — synth is ready immediately after this call
-    if (!audio.isLoaded) audio.loadAudio()
-    audio.playNote(midi, velocity)
+    if (!audio.isLoaded) {
+      audio.loadAudio()  // starts async loading; notes will be silent until loaded
+    } else {
+      audio.playNote(midi, velocity)
+    }
     room.emitNoteOn(midi, velocity)
     setLocalActiveNotes((prev) => new Set(prev).add(midi))
   }, [audio, room])
@@ -200,7 +202,7 @@ export const Room: React.FC = () => {
       )}
       {hasInteracted && audio.isLoading && (
         <div className="bg-gray-800/60 text-gray-300 px-4 py-3 m-4 rounded-xl text-sm text-center animate-pulse">
-          Starting audio...
+          Loading piano samples... (first load ~5 sec)
         </div>
       )}
 
