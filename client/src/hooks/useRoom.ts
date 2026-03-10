@@ -2,8 +2,6 @@ import { useRef, useCallback, useState, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { UserRole, RemoteNoteOnEvent, RemoteNoteOffEvent, RemoteSustainEvent, RoomParticipant } from '../types/midi'
 
-// Use explicit URL if set (dev), otherwise undefined = connect to same origin (production)
-const SERVER_URL: string | undefined = import.meta.env.VITE_SERVER_URL || undefined
 
 export interface RemoteCallbacks {
   onRemoteNoteOn: (note: number, velocity: number) => void
@@ -47,7 +45,7 @@ export function useRoom(): UseRoomReturn {
 
     // Reuse existing socket or create new one
     if (!socketRef.current) {
-      socketRef.current = io(SERVER_URL, {
+      socketRef.current = io({
         transports: ['websocket', 'polling'],
       })
     }
