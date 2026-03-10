@@ -13,7 +13,7 @@ export interface UseAudioReturn {
   setVolume: (db: number) => void
 }
 
-// Salamander Grand Piano samples (hosted by Tone.js team)
+// Salamander Grand Piano samples (stored locally in client/public/salamander/)
 const SAMPLE_URLS: Record<string, string> = {
   A0: 'A0.mp3',
   C1: 'C1.mp3', Ds1: 'Ds1.mp3', Fs1: 'Fs1.mp3', A1: 'A1.mp3',
@@ -46,7 +46,7 @@ export function useAudio(): UseAudioReturn {
 
     const sampler = new Tone.Sampler({
       urls: SAMPLE_URLS,
-      baseUrl: 'https://tonejs.github.io/audio/salamander/',
+      baseUrl: '/salamander/',
       onload: () => {
         setIsLoaded(true)
         setIsLoading(false)
