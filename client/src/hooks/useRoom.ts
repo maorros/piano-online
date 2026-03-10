@@ -2,8 +2,10 @@ import { useRef, useCallback, useState, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { UserRole, RemoteNoteOnEvent, RemoteNoteOffEvent, RemoteSustainEvent, RoomParticipant } from '../types/midi'
 
-// In production the client is served from the same origin as the server
-const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? window.location.origin
+// In dev use explicit localhost URL; in production builds connect to same origin (no URL)
+const SERVER_URL: string | undefined = import.meta.env.PROD
+  ? undefined
+  : (import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3001')
 
 export interface RemoteCallbacks {
   onRemoteNoteOn: (note: number, velocity: number) => void
