@@ -226,7 +226,7 @@ export const Room: React.FC = () => {
 
       {/* Audio loading banner */}
       {!hasInteracted && (
-        <div className="bg-blue-900/40 border border-blue-700 text-blue-300 px-4 py-3 m-4 rounded-xl text-sm text-center">
+        <div className="bg-blue-900/90 border border-blue-600 text-blue-200 px-4 py-3 m-4 rounded-xl text-sm text-center">
           Tap anywhere to start audio
         </div>
       )}
