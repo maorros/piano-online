@@ -86,7 +86,7 @@ export function useAudio(): UseAudioReturn {
   const playNote = useCallback((midi: number, velocity: number) => {
     if (!pSamplerRef.current || !mpSamplerRef.current || !mfSamplerRef.current || !isLoaded) return
     const note = midiToNoteName(midi)
-    const base = Math.pow(Math.max(0.01, velocity / 127), 0.4)
+    const base = Math.pow(Math.max(0.01, velocity / 127), 0.25)
 
     let pGain = 0, mpGain = 0, mfGain = 0
 
