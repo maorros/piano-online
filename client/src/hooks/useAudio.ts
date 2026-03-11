@@ -13,10 +13,13 @@ export interface UseAudioReturn {
   setVolume: (db: number) => void
 }
 
-// Salamander Grand Piano — 2 velocity layers stored in client/public/salamander/mp/ and mf/
+// Salamander Grand Piano — 3 velocity layers stored in client/public/salamander/p/, mp/, and mf/
 // Keys = Tone.js note names, values = filenames on disk (Ds/Fs notation)
-const XFADE_LOW = 40   // below this velocity: pure pp
-const XFADE_HIGH = 90  // above this velocity: pure ff
+// Crossfade zones: 0-40 pure p | 40-64 p→mp | 64-90 mp→mf | 90-127 pure mf
+const XFADE_P_MID = 40    // pure p below this
+const XFADE_P_END = 64    // p fades out, mp fades in, by this point
+const XFADE_MF_START = 64 // mp fades out, mf fades in, from this point
+const XFADE_MF_END = 90   // pure mf above this
 
 const SAMPLE_URLS: Record<string, string> = {
   A0: 'A0.mp3',
@@ -31,18 +34,20 @@ const SAMPLE_URLS: Record<string, string> = {
 }
 
 export function useAudio(): UseAudioReturn {
+  const pSamplerRef  = useRef<Tone.Sampler | null>(null)
   const mpSamplerRef = useRef<Tone.Sampler | null>(null)
   const mfSamplerRef = useRef<Tone.Sampler | null>(null)
   const volumeNodeRef = useRef<Tone.Volume | null>(null)
   const sustainedNotesRef = useRef<Set<number>>(new Set())
   const sustainActiveRef = useRef(false)
+  const pActiveRef  = useRef<Set<number>>(new Set())
   const mpActiveRef = useRef<Set<number>>(new Set())
   const mfActiveRef = useRef<Set<number>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const loadAudio = useCallback(() => {
-    if (mfSamplerRef.current) return
+    if (pSamplerRef.current) return
 
     void Tone.start()
 
@@ -53,11 +58,17 @@ export function useAudio(): UseAudioReturn {
 
     let loadedCount = 0
     const onload = () => {
-      if (++loadedCount === 2) {
+      if (++loadedCount === 3) {
         setIsLoaded(true)
         setIsLoading(false)
       }
     }
+
+    pSamplerRef.current = new Tone.Sampler({
+      urls: SAMPLE_URLS,
+      baseUrl: '/salamander/p/',
+      onload,
+    }).connect(volumeNode)
 
     mpSamplerRef.current = new Tone.Sampler({
       urls: SAMPLE_URLS,
@@ -73,16 +84,30 @@ export function useAudio(): UseAudioReturn {
   }, [])
 
   const playNote = useCallback((midi: number, velocity: number) => {
-    if (!mpSamplerRef.current || !mfSamplerRef.current || !isLoaded) return
+    if (!pSamplerRef.current || !mpSamplerRef.current || !mfSamplerRef.current || !isLoaded) return
     const note = midiToNoteName(midi)
     const base = Math.pow(Math.max(0.01, velocity / 127), 0.4)
 
-    const t = velocity <= XFADE_LOW ? 0
-            : velocity >= XFADE_HIGH ? 1
-            : (velocity - XFADE_LOW) / (XFADE_HIGH - XFADE_LOW)
-    const mpGain = 1 - t
-    const mfGain = t
+    let pGain = 0, mpGain = 0, mfGain = 0
 
+    if (velocity <= XFADE_P_MID) {
+      pGain = 1
+    } else if (velocity <= XFADE_P_END) {
+      const t = (velocity - XFADE_P_MID) / (XFADE_P_END - XFADE_P_MID)
+      pGain = 1 - t
+      mpGain = t
+    } else if (velocity <= XFADE_MF_END) {
+      const t = (velocity - XFADE_MF_START) / (XFADE_MF_END - XFADE_MF_START)
+      mpGain = 1 - t
+      mfGain = t
+    } else {
+      mfGain = 1
+    }
+
+    if (pGain > 0.01) {
+      pSamplerRef.current.triggerAttack(note, Tone.now(), base * pGain)
+      pActiveRef.current.add(midi)
+    }
     if (mpGain > 0.01) {
       mpSamplerRef.current.triggerAttack(note, Tone.now(), base * mpGain)
       mpActiveRef.current.add(midi)
@@ -100,6 +125,7 @@ export function useAudio(): UseAudioReturn {
       return
     }
     const note = midiToNoteName(midi)
+    if (pActiveRef.current.delete(midi))  pSamplerRef.current!.triggerRelease(note, Tone.now())
     if (mpActiveRef.current.delete(midi)) mpSamplerRef.current!.triggerRelease(note, Tone.now())
     if (mfActiveRef.current.delete(midi)) mfSamplerRef.current!.triggerRelease(note, Tone.now())
   }, [isLoaded])
@@ -113,6 +139,7 @@ export function useAudio(): UseAudioReturn {
     if (!isDown) {
       sustainedNotesRef.current.forEach((midi) => {
         const note = midiToNoteName(midi)
+        if (pActiveRef.current.delete(midi))  pSamplerRef.current!.triggerRelease(note, Tone.now())
         if (mpActiveRef.current.delete(midi)) mpSamplerRef.current!.triggerRelease(note, Tone.now())
         if (mfActiveRef.current.delete(midi)) mfSamplerRef.current!.triggerRelease(note, Tone.now())
       })
