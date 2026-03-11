@@ -44,13 +44,18 @@ io.on('connection', (socket: Socket) => {
   let currentRoomId: string | null = null
 
   socket.on('join-room', ({ roomId, role, name }: { roomId: string; role: 'teacher' | 'student'; name: string }) => {
-    const participants = getRoomInfo(roomId)
+    let participants = getRoomInfo(roomId)
 
-    // Check for role conflict (only one teacher allowed)
-    const existingRole = participants.find((p) => p.role === role)
-    if (existingRole) {
-      socket.emit('join-error', { message: `A ${role} has already joined this room.` })
-      return
+    // If same role already exists, evict the old socket (handles reconnects/refreshes)
+    const existingIdx = participants.findIndex((p) => p.role === role)
+    if (existingIdx !== -1) {
+      const old = participants[existingIdx]
+      if (old.socketId !== socket.id) {
+        io.sockets.sockets.get(old.socketId)?.disconnect()
+        participants = participants.filter((p) => p.socketId !== old.socketId)
+        rooms.set(roomId, participants)
+        console.log(`[evict] ${old.socketId} (${role}) replaced by ${socket.id} in room ${roomId}`)
+      }
     }
 
     currentRoomId = roomId
