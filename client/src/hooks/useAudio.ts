@@ -13,7 +13,7 @@ export interface UseAudioReturn {
   setVolume: (db: number) => void
 }
 
-// Salamander Grand Piano — 2 velocity layers stored in client/public/salamander/pp/ and ff/
+// Salamander Grand Piano — 2 velocity layers stored in client/public/salamander/mp/ and mf/
 // Keys = Tone.js note names, values = filenames on disk (Ds/Fs notation)
 const XFADE_LOW = 40   // below this velocity: pure pp
 const XFADE_HIGH = 90  // above this velocity: pure ff
@@ -31,18 +31,18 @@ const SAMPLE_URLS: Record<string, string> = {
 }
 
 export function useAudio(): UseAudioReturn {
-  const ppSamplerRef = useRef<Tone.Sampler | null>(null)
-  const ffSamplerRef = useRef<Tone.Sampler | null>(null)
+  const mpSamplerRef = useRef<Tone.Sampler | null>(null)
+  const mfSamplerRef = useRef<Tone.Sampler | null>(null)
   const volumeNodeRef = useRef<Tone.Volume | null>(null)
   const sustainedNotesRef = useRef<Set<number>>(new Set())
   const sustainActiveRef = useRef(false)
-  const ppActiveRef = useRef<Set<number>>(new Set())
-  const ffActiveRef = useRef<Set<number>>(new Set())
+  const mpActiveRef = useRef<Set<number>>(new Set())
+  const mfActiveRef = useRef<Set<number>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const loadAudio = useCallback(() => {
-    if (ffSamplerRef.current) return
+    if (mfSamplerRef.current) return
 
     void Tone.start()
 
@@ -59,37 +59,37 @@ export function useAudio(): UseAudioReturn {
       }
     }
 
-    ppSamplerRef.current = new Tone.Sampler({
+    mpSamplerRef.current = new Tone.Sampler({
       urls: SAMPLE_URLS,
-      baseUrl: '/salamander/pp/',
+      baseUrl: '/salamander/mp/',
       onload,
     }).connect(volumeNode)
 
-    ffSamplerRef.current = new Tone.Sampler({
+    mfSamplerRef.current = new Tone.Sampler({
       urls: SAMPLE_URLS,
-      baseUrl: '/salamander/ff/',
+      baseUrl: '/salamander/mf/',
       onload,
     }).connect(volumeNode)
   }, [])
 
   const playNote = useCallback((midi: number, velocity: number) => {
-    if (!ppSamplerRef.current || !ffSamplerRef.current || !isLoaded) return
+    if (!mpSamplerRef.current || !mfSamplerRef.current || !isLoaded) return
     const note = midiToNoteName(midi)
     const base = Math.pow(Math.max(0.01, velocity / 127), 0.4)
 
     const t = velocity <= XFADE_LOW ? 0
             : velocity >= XFADE_HIGH ? 1
             : (velocity - XFADE_LOW) / (XFADE_HIGH - XFADE_LOW)
-    const ppGain = 1 - t
-    const ffGain = t
+    const mpGain = 1 - t
+    const mfGain = t
 
-    if (ppGain > 0.01) {
-      ppSamplerRef.current.triggerAttack(note, Tone.now(), base * ppGain)
-      ppActiveRef.current.add(midi)
+    if (mpGain > 0.01) {
+      mpSamplerRef.current.triggerAttack(note, Tone.now(), base * mpGain)
+      mpActiveRef.current.add(midi)
     }
-    if (ffGain > 0.01) {
-      ffSamplerRef.current.triggerAttack(note, Tone.now(), base * ffGain)
-      ffActiveRef.current.add(midi)
+    if (mfGain > 0.01) {
+      mfSamplerRef.current.triggerAttack(note, Tone.now(), base * mfGain)
+      mfActiveRef.current.add(midi)
     }
   }, [isLoaded])
 
@@ -100,8 +100,8 @@ export function useAudio(): UseAudioReturn {
       return
     }
     const note = midiToNoteName(midi)
-    if (ppActiveRef.current.delete(midi)) ppSamplerRef.current!.triggerRelease(note, Tone.now())
-    if (ffActiveRef.current.delete(midi)) ffSamplerRef.current!.triggerRelease(note, Tone.now())
+    if (mpActiveRef.current.delete(midi)) mpSamplerRef.current!.triggerRelease(note, Tone.now())
+    if (mfActiveRef.current.delete(midi)) mfSamplerRef.current!.triggerRelease(note, Tone.now())
   }, [isLoaded])
 
   const setSustain = useCallback((value: number) => {
@@ -113,8 +113,8 @@ export function useAudio(): UseAudioReturn {
     if (!isDown) {
       sustainedNotesRef.current.forEach((midi) => {
         const note = midiToNoteName(midi)
-        if (ppActiveRef.current.delete(midi)) ppSamplerRef.current!.triggerRelease(note, Tone.now())
-        if (ffActiveRef.current.delete(midi)) ffSamplerRef.current!.triggerRelease(note, Tone.now())
+        if (mpActiveRef.current.delete(midi)) mpSamplerRef.current!.triggerRelease(note, Tone.now())
+        if (mfActiveRef.current.delete(midi)) mfSamplerRef.current!.triggerRelease(note, Tone.now())
       })
       sustainedNotesRef.current.clear()
     }
