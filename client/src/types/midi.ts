@@ -28,6 +28,7 @@ export interface RemoteSustainEvent extends SustainEvent {
 export interface RoomParticipant {
   socketId: string
   role: UserRole
+  name: string
 }
 
 // MIDI note number → note name helper

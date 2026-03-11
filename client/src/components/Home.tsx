@@ -8,6 +8,8 @@ function generateRoomId(): string {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate()
+  const [teacherName, setTeacherName] = useState('')
+  const [studentName, setStudentName] = useState('')
   const [studentCode, setStudentCode] = useState('')
   const [studentError, setStudentError] = useState('')
   const [createdRoomId, setCreatedRoomId] = useState<string | null>(null)
@@ -20,7 +22,8 @@ export const Home: React.FC = () => {
 
   const handleStartLesson = () => {
     if (createdRoomId) {
-      navigate(`/room/${createdRoomId}?role=teacher`)
+      const name = teacherName.trim() || 'Teacher'
+      navigate(`/room/${createdRoomId}?role=teacher&name=${encodeURIComponent(name)}`)
     }
   }
 
@@ -42,7 +45,8 @@ export const Home: React.FC = () => {
       setStudentError('Room code must be 6 characters.')
       return
     }
-    navigate(`/room/${code}?role=student`)
+    const name = studentName.trim() || 'Student'
+    navigate(`/room/${code}?role=student&name=${encodeURIComponent(name)}`)
   }
 
   return (
@@ -66,33 +70,43 @@ export const Home: React.FC = () => {
               </div>
             </div>
 
-            {!createdRoomId ? (
-              <button
-                onClick={handleCreateRoom}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
-              >
-                Create a Lesson
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <div className="bg-gray-900 rounded-xl p-3 text-center">
-                  <p className="text-gray-400 text-xs mb-1">Room Code</p>
-                  <p className="text-3xl font-mono font-bold text-white tracking-widest">{createdRoomId}</p>
-                </div>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={teacherName}
+                onChange={(e) => setTeacherName(e.target.value)}
+                placeholder="Your name (e.g. Maor)"
+                maxLength={30}
+                className="w-full px-4 py-3 bg-gray-900 text-white placeholder-gray-500 rounded-xl border border-gray-700 focus:border-blue-500 focus:outline-none"
+              />
+              {!createdRoomId ? (
                 <button
-                  onClick={handleCopyLink}
-                  className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-xl transition-colors"
-                >
-                  {copied ? '✓ Link Copied!' : 'Copy Student Link'}
-                </button>
-                <button
-                  onClick={handleStartLesson}
+                  onClick={handleCreateRoom}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
                 >
-                  Start Lesson →
+                  Create a Lesson
                 </button>
-              </div>
-            )}
+              ) : (
+                <>
+                  <div className="bg-gray-900 rounded-xl p-3 text-center">
+                    <p className="text-gray-400 text-xs mb-1">Room Code</p>
+                    <p className="text-3xl font-mono font-bold text-white tracking-widest">{createdRoomId}</p>
+                  </div>
+                  <button
+                    onClick={handleCopyLink}
+                    className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-xl transition-colors"
+                  >
+                    {copied ? '✓ Link Copied!' : 'Copy Student Link'}
+                  </button>
+                  <button
+                    onClick={handleStartLesson}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    Start Lesson →
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Student card */}
@@ -106,6 +120,14 @@ export const Home: React.FC = () => {
             </div>
 
             <div className="space-y-3">
+              <input
+                type="text"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                placeholder="Your name"
+                maxLength={30}
+                className="w-full px-4 py-3 bg-gray-900 text-white placeholder-gray-500 rounded-xl border border-gray-700 focus:border-red-500 focus:outline-none"
+              />
               <input
                 type="text"
                 value={studentCode}

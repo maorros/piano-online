@@ -15,7 +15,7 @@ export interface UseRoomReturn {
   roomId: string | null
   remoteParticipants: RoomParticipant[]
   joinError: string | null
-  joinRoom: (roomId: string, role: UserRole, callbacks: RemoteCallbacks) => void
+  joinRoom: (roomId: string, role: UserRole, name: string, callbacks: RemoteCallbacks) => void
   updateRemoteCallbacks: (callbacks: RemoteCallbacks) => void
   leaveRoom: () => void
   emitNoteOn: (note: number, velocity: number) => void
@@ -39,7 +39,7 @@ export function useRoom(): UseRoomReturn {
     }
   }, [])
 
-  const joinRoom = useCallback((targetRoomId: string, role: UserRole, callbacks: RemoteCallbacks) => {
+  const joinRoom = useCallback((targetRoomId: string, role: UserRole, name: string, callbacks: RemoteCallbacks) => {
     remoteCallbacksRef.current = callbacks
     setJoinError(null)
 
@@ -54,7 +54,7 @@ export function useRoom(): UseRoomReturn {
 
     socket.on('connect', () => {
       setIsConnected(true)
-      socket.emit('join-room', { roomId: targetRoomId, role })
+      socket.emit('join-room', { roomId: targetRoomId, role, name })
     })
 
     socket.on('disconnect', () => {
@@ -101,7 +101,7 @@ export function useRoom(): UseRoomReturn {
     // If already connected, emit join directly
     if (socket.connected) {
       setIsConnected(true)
-      socket.emit('join-room', { roomId: targetRoomId, role })
+      socket.emit('join-room', { roomId: targetRoomId, role, name })
     }
   }, [])
 

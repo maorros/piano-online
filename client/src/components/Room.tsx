@@ -11,6 +11,7 @@ export const Room: React.FC = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const role = (searchParams.get('role') ?? 'student') as UserRole
+  const myName = searchParams.get('name') ?? (role === 'teacher' ? 'Teacher' : 'Student')
 
   const audio = useAudio()
   const midi = useMidi()
@@ -98,7 +99,7 @@ export const Room: React.FC = () => {
   // ── Join room ────────────────────────────────────────────────────
   useEffect(() => {
     if (!roomId) return
-    room.joinRoom(roomId, role, {
+    room.joinRoom(roomId, role, myName, {
       onRemoteNoteOn: handleRemoteNoteOn,
       onRemoteNoteOff: handleRemoteNoteOff,
       onRemoteSustain: handleRemoteSustain,
@@ -140,48 +141,74 @@ export const Room: React.FC = () => {
 
   const remoteCount = room.remoteParticipants.length
   const remoteRole = role === 'teacher' ? 'student' : 'teacher'
+  const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
 
   return (
     <div
-      className="min-h-screen bg-gray-900 flex flex-col"
+      className="min-h-screen flex flex-col"
       onClick={handleFirstInteraction}
     >
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="text-gray-400 hover:text-white text-sm"
-          >
-            ← Back
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">Room:</span>
-            <span className="text-white font-mono font-bold text-sm tracking-wider">{roomId}</span>
+      <div className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 px-4 py-3 flex flex-col gap-2">
+        {/* Top row: room info left, status right */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/')}
+              className="text-gray-400 hover:text-white text-sm"
+            >
+              ← Back
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-sm">Room:</span>
+              <span className="text-white font-mono font-bold text-sm tracking-wider">{roomId}</span>
+            </div>
+            <div className={`flex items-center gap-1.5 text-sm ${role === 'teacher' ? 'text-blue-400' : 'text-red-400'}`}>
+              <div className="w-2 h-2 rounded-full bg-current" />
+              {myName}
+            </div>
           </div>
-          <div className={`flex items-center gap-1.5 text-sm ${role === 'teacher' ? 'text-blue-400' : 'text-red-400'}`}>
-            <div className="w-2 h-2 rounded-full bg-current" />
-            {role === 'teacher' ? 'Teacher' : 'Student'}
+
+          <div className="flex items-center gap-4">
+            {/* Connection status */}
+            <div className={`flex items-center gap-1.5 text-sm ${room.isConnected ? 'text-green-400' : 'text-yellow-400'}`}>
+              <div className={`w-2 h-2 rounded-full bg-current ${room.isConnected ? '' : 'animate-pulse'}`} />
+              {room.isConnected
+                ? remoteCount > 0
+                  ? `${remoteName} connected`
+                  : `Waiting for ${remoteRole}...`
+                : 'Connecting...'}
+            </div>
+
+            {/* MIDI status */}
+            {midi.isSupported && (
+              <div className={`text-sm ${midi.isConnected && midi.devices.length > 0 ? 'text-purple-400' : 'text-gray-500'}`}>
+                {midi.isConnected && midi.devices.length > 0
+                  ? `MIDI: ${midi.devices[0].name}`
+                  : 'No MIDI device'}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Connection status */}
-          <div className={`flex items-center gap-1.5 text-sm ${room.isConnected ? 'text-green-400' : 'text-yellow-400'}`}>
-            <div className={`w-2 h-2 rounded-full bg-current ${room.isConnected ? '' : 'animate-pulse'}`} />
-            {room.isConnected
-              ? remoteCount > 0
-                ? `${remoteRole} connected`
-                : 'Waiting for ' + remoteRole + '...'
-              : 'Connecting...'}
+        {/* Legend row */}
+        <div className="flex items-center gap-6 text-xs text-gray-300">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-blue-500" />
+            <span>{myName}</span>
           </div>
-
-          {/* MIDI status */}
-          {midi.isSupported && (
-            <div className={`text-sm ${midi.isConnected && midi.devices.length > 0 ? 'text-purple-400' : 'text-gray-500'}`}>
-              {midi.isConnected && midi.devices.length > 0
-                ? `MIDI: ${midi.devices[0].name}`
-                : 'No MIDI device'}
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-red-500" />
+            <span>{remoteName}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-purple-500" />
+            <span>Both playing</span>
+          </div>
+          {sustain && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-yellow-500" />
+              <span>Sustain</span>
             </div>
           )}
         </div>
@@ -206,28 +233,6 @@ export const Room: React.FC = () => {
         </div>
       )}
 
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6 py-3 text-xs text-gray-400">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-blue-500" />
-          <span>Your notes</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-red-500" />
-          <span>{remoteRole === 'teacher' ? "Teacher's" : "Student's"} notes</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-purple-500" />
-          <span>Both playing</span>
-        </div>
-        {sustain && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-yellow-500" />
-            <span>Sustain</span>
-          </div>
-        )}
-      </div>
-
       {/* Piano */}
       <div className="flex-1 flex items-center px-2 pb-4">
         <Piano
@@ -241,7 +246,7 @@ export const Room: React.FC = () => {
       </div>
 
       {/* Controls */}
-      <div className="bg-gray-800 border-t border-gray-700 px-4 py-3 flex items-center gap-6 flex-wrap">
+      <div className="bg-gray-800/80 backdrop-blur-sm border-t border-gray-700 px-4 py-3 flex items-center gap-6 flex-wrap">
         {/* Volume */}
         <div className="flex items-center gap-3">
           <span className="text-gray-400 text-sm">Volume</span>

@@ -19,6 +19,7 @@ const io = new Server(httpServer, {
 interface RoomParticipant {
   socketId: string
   role: 'teacher' | 'student'
+  name: string
 }
 
 // roomId → list of participants
@@ -42,7 +43,7 @@ io.on('connection', (socket: Socket) => {
   console.log(`[connect] ${socket.id}`)
   let currentRoomId: string | null = null
 
-  socket.on('join-room', ({ roomId, role }: { roomId: string; role: 'teacher' | 'student' }) => {
+  socket.on('join-room', ({ roomId, role, name }: { roomId: string; role: 'teacher' | 'student'; name: string }) => {
     const participants = getRoomInfo(roomId)
 
     // Check for role conflict (only one teacher allowed)
@@ -54,7 +55,7 @@ io.on('connection', (socket: Socket) => {
 
     currentRoomId = roomId
     socket.join(roomId)
-    participants.push({ socketId: socket.id, role })
+    participants.push({ socketId: socket.id, role, name })
     rooms.set(roomId, participants)
 
     // Tell this socket who else is in the room
@@ -62,9 +63,9 @@ io.on('connection', (socket: Socket) => {
     socket.emit('room-joined', { roomId, role, participants: others })
 
     // Tell others a new user joined
-    socket.to(roomId).emit('user-joined', { socketId: socket.id, role })
+    socket.to(roomId).emit('user-joined', { socketId: socket.id, role, name })
 
-    console.log(`[join] ${socket.id} as ${role} in room ${roomId} (${participants.length} participants)`)
+    console.log(`[join] ${socket.id} as ${role} (${name}) in room ${roomId} (${participants.length} participants)`)
   })
 
   // Relay MIDI events to other participants in the room
