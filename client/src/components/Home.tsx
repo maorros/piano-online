@@ -9,6 +9,7 @@ function generateRoomId(): string {
 export const Home: React.FC = () => {
   const navigate = useNavigate()
   const [teacherName, setTeacherName] = useState('')
+  const [inviteeName, setInviteeName] = useState('')
   const [studentName, setStudentName] = useState('')
   const [studentCode, setStudentCode] = useState('')
   const [studentError, setStudentError] = useState('')
@@ -29,7 +30,8 @@ export const Home: React.FC = () => {
 
   const handleCopyLink = async () => {
     if (!createdRoomId) return
-    const link = `${window.location.origin}/room/${createdRoomId}?role=student`
+    const name = inviteeName.trim() || 'Student'
+    const link = `${window.location.origin}/room/${createdRoomId}?role=student&name=${encodeURIComponent(name)}`
     await navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -76,6 +78,14 @@ export const Home: React.FC = () => {
                 value={teacherName}
                 onChange={(e) => setTeacherName(e.target.value)}
                 placeholder="Your name (e.g. Maor)"
+                maxLength={30}
+                className="w-full px-4 py-3 bg-gray-900 text-white placeholder-gray-500 rounded-xl border border-gray-700 focus:border-blue-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                value={inviteeName}
+                onChange={(e) => setInviteeName(e.target.value)}
+                placeholder="Student's name (e.g. Liam)"
                 maxLength={30}
                 className="w-full px-4 py-3 bg-gray-900 text-white placeholder-gray-500 rounded-xl border border-gray-700 focus:border-blue-500 focus:outline-none"
               />
