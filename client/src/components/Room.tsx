@@ -143,6 +143,9 @@ export const Room: React.FC = () => {
   const remoteRole = role === 'teacher' ? 'student' : 'teacher'
   const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
 
+  const teacherActiveNotes = role === 'teacher' ? localActiveNotes : remoteActiveNotes
+  const studentActiveNotes = role === 'teacher' ? remoteActiveNotes : localActiveNotes
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -163,7 +166,7 @@ export const Room: React.FC = () => {
               <span className="text-gray-400 text-sm">Room:</span>
               <span className="text-white font-mono font-bold text-sm tracking-wider">{roomId}</span>
             </div>
-            <div className={`flex items-center gap-1.5 text-sm ${role === 'teacher' ? 'text-blue-400' : 'text-red-400'}`}>
+            <div className={`flex items-center gap-1.5 text-sm ${role === 'teacher' ? 'text-blue-400' : 'text-green-400'}`}>
               <div className="w-2 h-2 rounded-full bg-current" />
               {myName}
             </div>
@@ -194,15 +197,15 @@ export const Room: React.FC = () => {
         {/* Legend row */}
         <div className="flex items-center gap-6 text-xs text-gray-300">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-blue-500" />
+            <div className={`w-3 h-3 rounded-sm ${role === 'teacher' ? 'bg-blue-500' : 'bg-green-500'}`} />
             <span>{myName}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-red-500" />
+            <div className={`w-3 h-3 rounded-sm ${role === 'teacher' ? 'bg-green-500' : 'bg-blue-500'}`} />
             <span>{remoteName}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-purple-500" />
+            <div className="w-3 h-3 rounded-sm bg-cyan-400" />
             <span>Both playing</span>
           </div>
           {sustain && (
@@ -238,8 +241,8 @@ export const Room: React.FC = () => {
         <Piano
           startMidi={pianoRange.start}
           endMidi={pianoRange.end}
-          localActiveNotes={localActiveNotes}
-          remoteActiveNotes={remoteActiveNotes}
+          teacherActiveNotes={teacherActiveNotes}
+          studentActiveNotes={studentActiveNotes}
           onNoteOn={(midi) => handleLocalNoteOn(midi)}
           onNoteOff={handleLocalNoteOff}
         />

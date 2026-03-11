@@ -3,8 +3,8 @@ import React, { useCallback } from 'react'
 interface PianoKeyProps {
   midi: number
   isBlack: boolean
-  isLocalActive: boolean
-  isRemoteActive: boolean
+  isTeacherActive: boolean
+  isStudentActive: boolean
   onNoteOn: (midi: number) => void
   onNoteOff: (midi: number) => void
   // Layout props passed from Piano
@@ -15,8 +15,8 @@ interface PianoKeyProps {
 export const PianoKey: React.FC<PianoKeyProps> = ({
   midi,
   isBlack,
-  isLocalActive,
-  isRemoteActive,
+  isTeacherActive,
+  isStudentActive,
   onNoteOn,
   onNoteOff,
   leftPercent,
@@ -40,18 +40,18 @@ export const PianoKey: React.FC<PianoKeyProps> = ({
     }
   }, [midi, onNoteOff])
 
-  // Color logic
+  // Color logic: teacher = blue, student = green, both = teal
   let bgColor: string
   if (isBlack) {
-    if (isLocalActive && isRemoteActive) bgColor = '#7c3aed'        // purple - both
-    else if (isLocalActive) bgColor = '#2563eb'                      // blue - local
-    else if (isRemoteActive) bgColor = '#dc2626'                     // red - remote
-    else bgColor = '#1f2937'                                         // dark gray - idle
+    if (isTeacherActive && isStudentActive) bgColor = '#0891b2'     // teal - both
+    else if (isTeacherActive) bgColor = '#2563eb'                   // blue - teacher
+    else if (isStudentActive) bgColor = '#16a34a'                   // green - student
+    else bgColor = '#1f2937'                                        // dark gray - idle
   } else {
-    if (isLocalActive && isRemoteActive) bgColor = '#c4b5fd'        // light purple
-    else if (isLocalActive) bgColor = '#93c5fd'                     // light blue
-    else if (isRemoteActive) bgColor = '#fca5a5'                    // light red
-    else bgColor = '#ffffff'                                         // white - idle
+    if (isTeacherActive && isStudentActive) bgColor = '#67e8f9'     // light teal
+    else if (isTeacherActive) bgColor = '#93c5fd'                   // light blue
+    else if (isStudentActive) bgColor = '#86efac'                   // light green
+    else bgColor = '#ffffff'                                        // white - idle
   }
 
   const borderColor = isBlack ? 'transparent' : '#d1d5db'
@@ -79,7 +79,7 @@ export const PianoKey: React.FC<PianoKeyProps> = ({
           height: '60%',
           zIndex: 2,
           borderRadius: '0 0 4px 4px',
-          boxShadow: isLocalActive || isRemoteActive
+          boxShadow: isTeacherActive || isStudentActive
             ? 'none'
             : '2px 4px 6px rgba(0,0,0,0.5)',
         }}
@@ -101,7 +101,7 @@ export const PianoKey: React.FC<PianoKeyProps> = ({
         borderWidth: '1px',
         borderStyle: 'solid',
         borderRadius: '0 0 6px 6px',
-        boxShadow: isLocalActive || isRemoteActive
+        boxShadow: isTeacherActive || isStudentActive
           ? 'inset 0 -2px 4px rgba(0,0,0,0.1)'
           : 'inset 0 -4px 6px rgba(0,0,0,0.08)',
       }}

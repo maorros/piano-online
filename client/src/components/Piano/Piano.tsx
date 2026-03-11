@@ -5,8 +5,8 @@ import { isBlackKey } from '../../types/midi'
 interface PianoProps {
   startMidi?: number   // default 21 (A0)
   endMidi?: number     // default 108 (C8) — full 88 keys
-  localActiveNotes: Set<number>
-  remoteActiveNotes: Set<number>
+  teacherActiveNotes: Set<number>
+  studentActiveNotes: Set<number>
   onNoteOn: (midi: number) => void
   onNoteOff: (midi: number) => void
 }
@@ -84,8 +84,8 @@ function computeLayout(startMidi: number, endMidi: number): KeyLayout[] {
 export const Piano: React.FC<PianoProps> = ({
   startMidi = 21,
   endMidi = 108,
-  localActiveNotes,
-  remoteActiveNotes,
+  teacherActiveNotes,
+  studentActiveNotes,
   onNoteOn,
   onNoteOff,
 }) => {
@@ -124,8 +124,8 @@ export const Piano: React.FC<PianoProps> = ({
             key={key.midi}
             midi={key.midi}
             isBlack={false}
-            isLocalActive={localActiveNotes.has(key.midi)}
-            isRemoteActive={remoteActiveNotes.has(key.midi)}
+            isTeacherActive={teacherActiveNotes.has(key.midi)}
+            isStudentActive={studentActiveNotes.has(key.midi)}
             onNoteOn={onNoteOn}
             onNoteOff={onNoteOff}
             leftPercent={key.leftPercent}
@@ -138,8 +138,8 @@ export const Piano: React.FC<PianoProps> = ({
             key={key.midi}
             midi={key.midi}
             isBlack={true}
-            isLocalActive={localActiveNotes.has(key.midi)}
-            isRemoteActive={remoteActiveNotes.has(key.midi)}
+            isTeacherActive={teacherActiveNotes.has(key.midi)}
+            isStudentActive={studentActiveNotes.has(key.midi)}
             onNoteOn={onNoteOn}
             onNoteOff={onNoteOff}
             leftPercent={key.leftPercent}
