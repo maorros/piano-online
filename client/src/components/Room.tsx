@@ -310,7 +310,7 @@ export const Room: React.FC = () => {
 
         {/* Branding */}
         <div className="ml-auto flex items-center gap-2">
-          <img src="/ptp_logo_3.png" alt="PTP" className="h-7 w-auto" />
+          <img src="/ptp_logo_4.png" alt="PTP" className="h-7 w-auto" />
           <span className="text-gray-200 text-sm">Playing Through Playing</span>
           <span className="text-gray-300 text-sm">by Maor</span>
           <img src="/white_logo_transparent.png" alt="MR" className="h-5 w-auto" />
