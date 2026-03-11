@@ -9,7 +9,8 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #111827;
+  background: #111827 url('/forest_background.jpg') no-repeat center center;
+  background-size: cover;
   color: #f9fafb;
   -webkit-font-smoothing: antialiased;
 }
