@@ -308,6 +308,15 @@ export const Room: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Branding strip */}
+      <div className="bg-gray-900/60 backdrop-blur-sm border-t border-gray-800 px-4 py-1.5 flex items-center justify-center gap-2">
+        <img src="/ptp_eng.png" alt="PTP" className="h-5 w-auto" />
+        <span className="text-gray-400 text-xs">Playing Through Playing</span>
+        <span className="text-gray-600 text-xs">by Maor</span>
+        <img src="/white_logo_transparent.png" alt="MR" className="h-3.5 w-auto opacity-60" />
+        <span className="text-gray-600 text-xs">Rosenberg</span>
+      </div>
     </div>
   )
 }
