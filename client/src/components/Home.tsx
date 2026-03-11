@@ -56,9 +56,14 @@ export const Home: React.FC = () => {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="text-6xl mb-4">🎹</div>
+          <img src="/ptp_eng.png" alt="PTP Playing Through Playing" className="h-20 mx-auto mb-4" />
           <h1 className="text-4xl font-bold text-white mb-2">Piano Online</h1>
           <p className="text-gray-400 text-lg">Real-time collaborative piano lessons</p>
+          <div className="flex items-center justify-center gap-1.5 mt-3 text-gray-400 text-sm">
+            <span>by Maor</span>
+            <img src="/white_logo_transparent.png" alt="MR" className="h-5 w-auto" />
+            <span>Rosenberg</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
