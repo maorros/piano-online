@@ -15,6 +15,9 @@ export interface UseAudioReturn {
 
 // Salamander Grand Piano — 2 velocity layers stored in client/public/salamander/pp/ and ff/
 // Keys = Tone.js note names, values = filenames on disk (Ds/Fs notation)
+const XFADE_LOW = 40   // below this velocity: pure pp
+const XFADE_HIGH = 90  // above this velocity: pure ff
+
 const SAMPLE_URLS: Record<string, string> = {
   A0: 'A0.mp3',
   C1: 'C1.mp3', 'D#1': 'Ds1.mp3', 'F#1': 'Fs1.mp3', A1: 'A1.mp3',
@@ -33,7 +36,8 @@ export function useAudio(): UseAudioReturn {
   const volumeNodeRef = useRef<Tone.Volume | null>(null)
   const sustainedNotesRef = useRef<Set<number>>(new Set())
   const sustainActiveRef = useRef(false)
-  const noteSamplerRef = useRef<Map<number, Tone.Sampler>>(new Map())
+  const ppActiveRef = useRef<Set<number>>(new Set())
+  const ffActiveRef = useRef<Set<number>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -71,23 +75,33 @@ export function useAudio(): UseAudioReturn {
   const playNote = useCallback((midi: number, velocity: number) => {
     if (!ppSamplerRef.current || !ffSamplerRef.current || !isLoaded) return
     const note = midiToNoteName(midi)
-    const normalizedVelocity = Math.max(0.01, velocity / 127)
-    const sampler = velocity < 64 ? ppSamplerRef.current : ffSamplerRef.current
-    sampler.triggerAttack(note, Tone.now(), normalizedVelocity)
-    noteSamplerRef.current.set(midi, sampler)
+    const base = Math.max(0.01, velocity / 127)
+
+    const t = velocity <= XFADE_LOW ? 0
+            : velocity >= XFADE_HIGH ? 1
+            : (velocity - XFADE_LOW) / (XFADE_HIGH - XFADE_LOW)
+    const ppGain = 1 - t
+    const ffGain = t
+
+    if (ppGain > 0.01) {
+      ppSamplerRef.current.triggerAttack(note, Tone.now(), base * ppGain)
+      ppActiveRef.current.add(midi)
+    }
+    if (ffGain > 0.01) {
+      ffSamplerRef.current.triggerAttack(note, Tone.now(), base * ffGain)
+      ffActiveRef.current.add(midi)
+    }
   }, [isLoaded])
 
   const stopNote = useCallback((midi: number) => {
     if (!isLoaded) return
-    const sampler = noteSamplerRef.current.get(midi)
-    if (!sampler) return
-
     if (sustainActiveRef.current) {
       sustainedNotesRef.current.add(midi)
       return
     }
-    sampler.triggerRelease(midiToNoteName(midi), Tone.now())
-    noteSamplerRef.current.delete(midi)
+    const note = midiToNoteName(midi)
+    if (ppActiveRef.current.delete(midi)) ppSamplerRef.current!.triggerRelease(note, Tone.now())
+    if (ffActiveRef.current.delete(midi)) ffSamplerRef.current!.triggerRelease(note, Tone.now())
   }, [isLoaded])
 
   const setSustain = useCallback((value: number) => {
@@ -98,11 +112,9 @@ export function useAudio(): UseAudioReturn {
 
     if (!isDown) {
       sustainedNotesRef.current.forEach((midi) => {
-        const sampler = noteSamplerRef.current.get(midi)
-        if (sampler) {
-          sampler.triggerRelease(midiToNoteName(midi), Tone.now())
-          noteSamplerRef.current.delete(midi)
-        }
+        const note = midiToNoteName(midi)
+        if (ppActiveRef.current.delete(midi)) ppSamplerRef.current!.triggerRelease(note, Tone.now())
+        if (ffActiveRef.current.delete(midi)) ffSamplerRef.current!.triggerRelease(note, Tone.now())
       })
       sustainedNotesRef.current.clear()
     }
