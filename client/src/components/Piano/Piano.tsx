@@ -9,6 +9,7 @@ interface PianoProps {
   studentActiveNotes: Set<number>
   onNoteOn: (midi: number) => void
   onNoteOff: (midi: number) => void
+  keyboardMap?: Map<number, string>
 }
 
 interface KeyLayout {
@@ -88,6 +89,7 @@ export const Piano: React.FC<PianoProps> = ({
   studentActiveNotes,
   onNoteOn,
   onNoteOff,
+  keyboardMap,
 }) => {
   const layout = useMemo(() => computeLayout(startMidi, endMidi), [startMidi, endMidi])
 
@@ -130,6 +132,7 @@ export const Piano: React.FC<PianoProps> = ({
             onNoteOff={onNoteOff}
             leftPercent={key.leftPercent}
             widthPercent={key.widthPercent}
+            keyLabel={keyboardMap?.get(key.midi)}
           />
         ))}
         {/* Render black keys on top */}
@@ -144,6 +147,7 @@ export const Piano: React.FC<PianoProps> = ({
             onNoteOff={onNoteOff}
             leftPercent={key.leftPercent}
             widthPercent={key.widthPercent}
+            keyLabel={keyboardMap?.get(key.midi)}
           />
         ))}
       </div>

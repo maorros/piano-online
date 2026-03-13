@@ -10,6 +10,7 @@ interface PianoKeyProps {
   // Layout props passed from Piano
   leftPercent: number   // left offset as percentage of total white-key area
   widthPercent: number  // width as percentage
+  keyLabel?: string
 }
 
 export const PianoKey: React.FC<PianoKeyProps> = ({
@@ -21,6 +22,7 @@ export const PianoKey: React.FC<PianoKeyProps> = ({
   onNoteOff,
   leftPercent,
   widthPercent,
+  keyLabel,
 }) => {
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault()
@@ -86,7 +88,23 @@ export const PianoKey: React.FC<PianoKeyProps> = ({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-      />
+      >
+        {keyLabel && (
+          <span style={{
+            position: 'absolute',
+            bottom: '4px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '7px',
+            color: '#9ca3af',
+            fontFamily: 'monospace',
+            pointerEvents: 'none',
+            lineHeight: 1,
+          }}>
+            {keyLabel}
+          </span>
+        )}
+      </div>
     )
   }
 
@@ -108,6 +126,22 @@ export const PianoKey: React.FC<PianoKeyProps> = ({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerLeave}
-    />
+    >
+      {keyLabel && (
+        <span style={{
+          position: 'absolute',
+          bottom: '6px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '9px',
+          color: '#6b7280',
+          fontFamily: 'monospace',
+          pointerEvents: 'none',
+          lineHeight: 1,
+        }}>
+          {keyLabel}
+        </span>
+      )}
+    </div>
   )
 }

@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { Piano } from './Piano/Piano'
 import { useAudio } from '../hooks/useAudio'
 import { useMidi } from '../hooks/useMidi'
 import { useRoom } from '../hooks/useRoom'
+import { useKeyboard, MIDI_TO_KEY } from '../hooks/useKeyboard'
 import type { UserRole } from '../types/midi'
 
 export const Room: React.FC = () => {
@@ -16,6 +17,7 @@ export const Room: React.FC = () => {
   const audio = useAudio()
   const midi = useMidi()
   const room = useRoom()
+  const keyboard = useKeyboard()
 
   const [localActiveNotes, setLocalActiveNotes] = useState<Set<number>>(new Set())
   const [remoteActiveNotes, setRemoteActiveNotes] = useState<Set<number>>(new Set())
@@ -23,6 +25,7 @@ export const Room: React.FC = () => {
   const [hasInteracted, setHasInteracted] = useState(false)
   const [sustain, setSustain] = useState(false)
   const [pianoRange, setPianoRange] = useState({ start: 48, end: 96 })  // C3–C7 default
+  const [showKeyLabels, setShowKeyLabels] = useState(true)
 
   const RANGE_PRESETS = [
     { label: '2 oct', start: 60, end: 84 },   // C4–C6
@@ -36,6 +39,12 @@ export const Room: React.FC = () => {
     setPianoRange({ start, end })
     room.emitRange(start, end)
   }, [room])
+
+  const handleKeyLabelsToggle = useCallback(() => {
+    const next = !showKeyLabels
+    setShowKeyLabels(next)
+    room.emitKeyLabels(next)
+  }, [showKeyLabels, room])
 
   // Load audio on first user interaction (synchronous — safe to call before playNote)
   const handleFirstInteraction = useCallback(() => {
@@ -104,6 +113,7 @@ export const Room: React.FC = () => {
       onRemoteNoteOff: handleRemoteNoteOff,
       onRemoteSustain: handleRemoteSustain,
       onRemoteRange: (start, end) => setPianoRange({ start, end }),
+      onRemoteKeyLabels: (enabled) => setShowKeyLabels(enabled),
     })
     return () => room.leaveRoom()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,6 +139,23 @@ export const Room: React.FC = () => {
     })
   }, [handleLocalNoteOn, handleLocalNoteOff, handleLocalSustain, midi])
 
+  // ── Computer keyboard ─────────────────────────────────────────────
+  useEffect(() => {
+    keyboard.connect({
+      onNoteOn: handleLocalNoteOn,
+      onNoteOff: handleLocalNoteOff,
+    })
+    return () => keyboard.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    keyboard.updateCallbacks({
+      onNoteOn: handleLocalNoteOn,
+      onNoteOff: handleLocalNoteOff,
+    })
+  }, [handleLocalNoteOn, handleLocalNoteOff, keyboard])
+
   // Keep remote callbacks fresh (fixes stale closure after audio loads)
   useEffect(() => {
     room.updateRemoteCallbacks({
@@ -136,8 +163,11 @@ export const Room: React.FC = () => {
       onRemoteNoteOff: handleRemoteNoteOff,
       onRemoteSustain: handleRemoteSustain,
       onRemoteRange: (start, end) => setPianoRange({ start, end }),
+      onRemoteKeyLabels: (enabled) => setShowKeyLabels(enabled),
     })
   }, [handleRemoteNoteOn, handleRemoteNoteOff, handleRemoteSustain, room])
+
+  const keyboardMap = useMemo(() => showKeyLabels ? MIDI_TO_KEY : undefined, [showKeyLabels])
 
   const remoteCount = room.remoteParticipants.length
   const remoteRole = role === 'teacher' ? 'student' : 'teacher'
@@ -245,6 +275,7 @@ export const Room: React.FC = () => {
           studentActiveNotes={studentActiveNotes}
           onNoteOn={(midi) => handleLocalNoteOn(midi)}
           onNoteOff={handleLocalNoteOff}
+          keyboardMap={keyboardMap}
         />
       </div>
 
@@ -293,6 +324,20 @@ export const Room: React.FC = () => {
               })}
             </div>
           </div>
+        )}
+
+        {/* Key labels toggle — teacher only */}
+        {role === 'teacher' && (
+          <button
+            onClick={handleKeyLabelsToggle}
+            className={`text-xs px-3 py-1 rounded-lg transition-colors ${
+              showKeyLabels
+                ? 'bg-blue-600/40 text-blue-300 hover:bg-blue-600/60'
+                : 'bg-gray-700 text-gray-500 hover:bg-gray-600'
+            }`}
+          >
+            Key labels {showKeyLabels ? 'ON' : 'OFF'}
+          </button>
         )}
 
         {/* Share link */}

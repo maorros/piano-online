@@ -94,6 +94,11 @@ io.on('connection', (socket: Socket) => {
     socket.to(currentRoomId).emit('remote-display-range', data)
   })
 
+  socket.on('key-labels', (data: { enabled: boolean }) => {
+    if (!currentRoomId) return
+    socket.to(currentRoomId).emit('remote-key-labels', data)
+  })
+
   socket.on('disconnect', () => {
     console.log(`[disconnect] ${socket.id}`)
     if (currentRoomId) {

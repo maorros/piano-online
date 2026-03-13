@@ -8,6 +8,7 @@ export interface RemoteCallbacks {
   onRemoteNoteOff: (note: number) => void
   onRemoteSustain: (value: number) => void
   onRemoteRange?: (start: number, end: number) => void
+  onRemoteKeyLabels?: (enabled: boolean) => void
 }
 
 export interface UseRoomReturn {
@@ -22,6 +23,7 @@ export interface UseRoomReturn {
   emitNoteOff: (note: number) => void
   emitSustain: (value: number) => void
   emitRange: (start: number, end: number) => void
+  emitKeyLabels: (enabled: boolean) => void
 }
 
 export function useRoom(): UseRoomReturn {
@@ -98,6 +100,10 @@ export function useRoom(): UseRoomReturn {
       remoteCallbacksRef.current?.onRemoteRange?.(start, end)
     })
 
+    socket.on('remote-key-labels', ({ enabled }: { enabled: boolean }) => {
+      remoteCallbacksRef.current?.onRemoteKeyLabels?.(enabled)
+    })
+
     // If already connected, emit join directly
     if (socket.connected) {
       setIsConnected(true)
@@ -134,6 +140,10 @@ export function useRoom(): UseRoomReturn {
     socketRef.current?.emit('display-range', { start, end })
   }, [])
 
+  const emitKeyLabels = useCallback((enabled: boolean) => {
+    socketRef.current?.emit('key-labels', { enabled })
+  }, [])
+
   return {
     isConnected,
     roomId,
@@ -146,5 +156,6 @@ export function useRoom(): UseRoomReturn {
     emitNoteOff,
     emitSustain,
     emitRange,
+    emitKeyLabels,
   }
 }
