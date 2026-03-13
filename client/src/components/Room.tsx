@@ -28,7 +28,7 @@ export const Room: React.FC = () => {
   const [showKeyLabels, setShowKeyLabels] = useState(true)
 
   const RANGE_PRESETS = [
-    { label: '2 oct', start: 60, end: 84 },   // C4–C6
+    { label: '2 oct', start: 48, end: 72 },   // C4–C6
     { label: '3 oct', start: 48, end: 84 },   // C3–C6
     { label: '4 oct', start: 48, end: 96 },   // C3–C7
     { label: '5 oct', start: 36, end: 96 },   // C2–C7
