@@ -9,10 +9,10 @@ export const KEY_TO_MIDI: Record<string, number> = {
   q: 60, w: 62, e: 64, r: 65, t: 67, y: 69, u: 71, i: 72, o: 74, p: 76,
   // Upper octave blacks (number row)
   '2': 61, '3': 63, '5': 66, '6': 68, '7': 70, '9': 73, '0': 75,
-  // Extension whites ([ ] row) — F5–G5
+  // Extension whites ([ ] row) — F5, G5
   '[': 77, ']': 79,
-  // Extension blacks (- = row) — F#5–G#5
-  '-': 78, '=': 80,
+  // Extension black (= row) — F#5
+  '=': 78,
   // Redundant mappings (same notes as Q/2/W/3/E — no labels)
   ',': 60, 'l': 61, '.': 62, ';': 63, '/': 64,
 }
