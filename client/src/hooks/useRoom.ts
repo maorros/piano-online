@@ -1,6 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { UserRole, RemoteNoteOnEvent, RemoteNoteOffEvent, RemoteSustainEvent, RoomParticipant } from '../types/midi'
+import type { RecordedEvent } from './useRecorder'
 
 
 export interface RemoteCallbacks {
@@ -9,6 +10,9 @@ export interface RemoteCallbacks {
   onRemoteSustain: (value: number) => void
   onRemoteRange?: (start: number, end: number) => void
   onRemoteKeyLabels?: (enabled: boolean) => void
+  onRemoteRecordStart?: () => void
+  onRemoteRecordStop?: () => void
+  onRemoteRecordEvents?: (events: RecordedEvent[]) => void
 }
 
 export interface UseRoomReturn {
@@ -24,6 +28,9 @@ export interface UseRoomReturn {
   emitSustain: (value: number) => void
   emitRange: (start: number, end: number) => void
   emitKeyLabels: (enabled: boolean) => void
+  emitRecordStart: () => void
+  emitRecordStop: () => void
+  emitRecordEvents: (events: RecordedEvent[]) => void
 }
 
 export function useRoom(): UseRoomReturn {
@@ -104,6 +111,18 @@ export function useRoom(): UseRoomReturn {
       remoteCallbacksRef.current?.onRemoteKeyLabels?.(enabled)
     })
 
+    socket.on('remote-record-start', () => {
+      remoteCallbacksRef.current?.onRemoteRecordStart?.()
+    })
+
+    socket.on('remote-record-stop', () => {
+      remoteCallbacksRef.current?.onRemoteRecordStop?.()
+    })
+
+    socket.on('remote-record-events', (events: RecordedEvent[]) => {
+      remoteCallbacksRef.current?.onRemoteRecordEvents?.(events)
+    })
+
     // If already connected, emit join directly
     if (socket.connected) {
       setIsConnected(true)
@@ -144,6 +163,18 @@ export function useRoom(): UseRoomReturn {
     socketRef.current?.emit('key-labels', { enabled })
   }, [])
 
+  const emitRecordStart = useCallback(() => {
+    socketRef.current?.emit('record-start')
+  }, [])
+
+  const emitRecordStop = useCallback(() => {
+    socketRef.current?.emit('record-stop')
+  }, [])
+
+  const emitRecordEvents = useCallback((events: RecordedEvent[]) => {
+    socketRef.current?.emit('record-events', events)
+  }, [])
+
   return {
     isConnected,
     roomId,
@@ -157,5 +188,8 @@ export function useRoom(): UseRoomReturn {
     emitSustain,
     emitRange,
     emitKeyLabels,
+    emitRecordStart,
+    emitRecordStop,
+    emitRecordEvents,
   }
 }

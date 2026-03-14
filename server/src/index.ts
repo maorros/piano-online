@@ -99,6 +99,21 @@ io.on('connection', (socket: Socket) => {
     socket.to(currentRoomId).emit('remote-key-labels', data)
   })
 
+  socket.on('record-start', () => {
+    if (!currentRoomId) return
+    socket.to(currentRoomId).emit('remote-record-start')
+  })
+
+  socket.on('record-stop', () => {
+    if (!currentRoomId) return
+    socket.to(currentRoomId).emit('remote-record-stop')
+  })
+
+  socket.on('record-events', (data: unknown) => {
+    if (!currentRoomId) return
+    socket.to(currentRoomId).emit('remote-record-events', data)
+  })
+
   socket.on('disconnect', () => {
     console.log(`[disconnect] ${socket.id}`)
     if (currentRoomId) {

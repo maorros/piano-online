@@ -1,11 +1,14 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { Piano } from './Piano/Piano'
 import { useAudio } from '../hooks/useAudio'
 import { useMidi } from '../hooks/useMidi'
 import { useRoom } from '../hooks/useRoom'
 import { useKeyboard, MIDI_TO_KEY } from '../hooks/useKeyboard'
+import { useRecorder } from '../hooks/useRecorder'
+import { exportMidi } from '../utils/exportMidi'
 import type { UserRole } from '../types/midi'
+import type { RecordedEvent } from '../hooks/useRecorder'
 
 export const Room: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>()
@@ -18,6 +21,7 @@ export const Room: React.FC = () => {
   const midi = useMidi()
   const room = useRoom()
   const keyboard = useKeyboard()
+  const recorder = useRecorder()
 
   const [localActiveNotes, setLocalActiveNotes] = useState<Set<number>>(new Set())
   const [remoteActiveNotes, setRemoteActiveNotes] = useState<Set<number>>(new Set())
@@ -26,6 +30,11 @@ export const Room: React.FC = () => {
   const [sustain, setSustain] = useState(false)
   const [pianoRange, setPianoRange] = useState({ start: 48, end: 96 })  // C3–C7 default
   const [showKeyLabels, setShowKeyLabels] = useState(true)
+  const [recElapsed, setRecElapsed] = useState(0)
+  const pendingTeacherEventsRef = useRef<RecordedEvent[] | null>(null)
+
+  const remoteRole = role === 'teacher' ? 'student' : 'teacher'
+  const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
 
   const RANGE_PRESETS = [
     { label: '2 oct', start: 48, end: 72 },   // C4–C6
@@ -66,18 +75,20 @@ export const Room: React.FC = () => {
       audio.playNote(midi, velocity)
     }
     room.emitNoteOn(midi, velocity)
+    recorder.recordEvent('on', midi, velocity, 'local')
     setLocalActiveNotes((prev) => new Set(prev).add(midi))
-  }, [audio, room])
+  }, [audio, room, recorder])
 
   const handleLocalNoteOff = useCallback((midi: number) => {
     audio.stopNote(midi)  // sustain logic is handled inside useAudio
     room.emitNoteOff(midi)
+    recorder.recordEvent('off', midi, 0, 'local')
     setLocalActiveNotes((prev) => {
       const next = new Set(prev)
       next.delete(midi)
       return next
     })
-  }, [audio, room])
+  }, [audio, room, recorder])
 
   const handleLocalSustain = useCallback((value: number) => {
     const isDown = value >= 64
@@ -89,17 +100,19 @@ export const Room: React.FC = () => {
   // ── Remote note handlers ──────────────────────────────────────────
   const handleRemoteNoteOn = useCallback((note: number, velocity: number) => {
     audio.playNote(note, velocity)
+    recorder.recordEvent('on', note, velocity, 'remote')
     setRemoteActiveNotes((prev) => new Set(prev).add(note))
-  }, [audio])
+  }, [audio, recorder])
 
   const handleRemoteNoteOff = useCallback((note: number) => {
     audio.stopNote(note)
+    recorder.recordEvent('off', note, 0, 'remote')
     setRemoteActiveNotes((prev) => {
       const next = new Set(prev)
       next.delete(note)
       return next
     })
-  }, [audio])
+  }, [audio, recorder])
 
   const handleRemoteSustain = useCallback((value: number) => {
     audio.setSustain(value)
@@ -114,6 +127,25 @@ export const Room: React.FC = () => {
       onRemoteSustain: handleRemoteSustain,
       onRemoteRange: (start, end) => setPianoRange({ start, end }),
       onRemoteKeyLabels: (enabled) => setShowKeyLabels(enabled),
+      onRemoteRecordStart: () => recorder.startRecording(),
+      onRemoteRecordStop: () => {
+        const events = recorder.stopAndGetEvents()
+        room.emitRecordEvents(events)
+      },
+      onRemoteRecordEvents: (events) => {
+        // Teacher receives student's events — export both files
+        const teacherEvents = pendingTeacherEventsRef.current
+        if (teacherEvents) {
+          pendingTeacherEventsRef.current = null
+          const localEvs = teacherEvents.filter(e => e.source === 'local')
+          const remoteEvs = teacherEvents.filter(e => e.source === 'remote')
+          exportMidi(`${myName}-perspective`, localEvs, remoteEvs)
+
+          const studentLocal = events.filter(e => e.source === 'local')
+          const studentRemote = events.filter(e => e.source === 'remote')
+          exportMidi(`${remoteName}-perspective`, studentLocal, studentRemote)
+        }
+      },
     })
     return () => room.leaveRoom()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,14 +196,58 @@ export const Room: React.FC = () => {
       onRemoteSustain: handleRemoteSustain,
       onRemoteRange: (start, end) => setPianoRange({ start, end }),
       onRemoteKeyLabels: (enabled) => setShowKeyLabels(enabled),
+      onRemoteRecordStart: () => recorder.startRecording(),
+      onRemoteRecordStop: () => {
+        const events = recorder.stopAndGetEvents()
+        room.emitRecordEvents(events)
+      },
+      onRemoteRecordEvents: (events) => {
+        const teacherEvents = pendingTeacherEventsRef.current
+        if (teacherEvents) {
+          pendingTeacherEventsRef.current = null
+          const localEvs = teacherEvents.filter(e => e.source === 'local')
+          const remoteEvs = teacherEvents.filter(e => e.source === 'remote')
+          exportMidi(`${myName}-perspective`, localEvs, remoteEvs)
+
+          const studentLocal = events.filter(e => e.source === 'local')
+          const studentRemote = events.filter(e => e.source === 'remote')
+          exportMidi(`${remoteName}-perspective`, studentLocal, studentRemote)
+        }
+      },
     })
-  }, [handleRemoteNoteOn, handleRemoteNoteOff, handleRemoteSustain, room])
+  }, [handleRemoteNoteOn, handleRemoteNoteOff, handleRemoteSustain, room, recorder, myName, remoteName])
+
+  // Recording elapsed timer
+  useEffect(() => {
+    if (!recorder.isRecording) { setRecElapsed(0); return }
+    const id = setInterval(() => setRecElapsed((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [recorder.isRecording])
+
+  const handleRecordStart = useCallback(() => {
+    recorder.startRecording()
+    room.emitRecordStart()
+  }, [recorder, room])
+
+  const handleRecordStop = useCallback(() => {
+    const events = recorder.stopAndGetEvents()
+    pendingTeacherEventsRef.current = events
+    room.emitRecordStop()
+    // Timeout fallback: if student doesn't respond in 3s, export teacher file only
+    setTimeout(() => {
+      if (pendingTeacherEventsRef.current) {
+        const teacherEvents = pendingTeacherEventsRef.current
+        pendingTeacherEventsRef.current = null
+        const localEvs = teacherEvents.filter(e => e.source === 'local')
+        const remoteEvs = teacherEvents.filter(e => e.source === 'remote')
+        exportMidi(`${myName}-perspective`, localEvs, remoteEvs)
+      }
+    }, 3000)
+  }, [recorder, room, myName])
 
   const keyboardMap = useMemo(() => showKeyLabels ? MIDI_TO_KEY : undefined, [showKeyLabels])
 
   const remoteCount = room.remoteParticipants.length
-  const remoteRole = role === 'teacher' ? 'student' : 'teacher'
-  const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
 
   const teacherActiveNotes = role === 'teacher' ? localActiveNotes : remoteActiveNotes
   const studentActiveNotes = role === 'teacher' ? remoteActiveNotes : localActiveNotes
@@ -338,6 +414,25 @@ export const Room: React.FC = () => {
           >
             Key labels {showKeyLabels ? 'ON' : 'OFF'}
           </button>
+        )}
+
+        {/* Record button — teacher only */}
+        {role === 'teacher' && (
+          recorder.isRecording ? (
+            <button
+              onClick={handleRecordStop}
+              className="text-xs px-3 py-1 rounded-lg bg-red-700/60 text-red-200 animate-pulse"
+            >
+              ■ Stop • {Math.floor(recElapsed / 60)}:{String(recElapsed % 60).padStart(2, '0')}
+            </button>
+          ) : (
+            <button
+              onClick={handleRecordStart}
+              className="text-xs px-3 py-1 rounded-lg bg-gray-700 text-gray-300 hover:bg-red-800/50 hover:text-red-300 transition-colors"
+            >
+              ● Rec
+            </button>
+          )
         )}
 
         {/* Share link */}
