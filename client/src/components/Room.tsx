@@ -32,6 +32,8 @@ export const Room: React.FC = () => {
   const [showKeyLabels, setShowKeyLabels] = useState(true)
   const [recElapsed, setRecElapsed] = useState(0)
   const pendingTeacherEventsRef = useRef<RecordedEvent[] | null>(null)
+  const [bgUrl, setBgUrl] = useState<string | null>(null)
+  const bgFileInputRef = useRef<HTMLInputElement>(null)
 
   const remoteRole = role === 'teacher' ? 'student' : 'teacher'
   const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
@@ -43,6 +45,26 @@ export const Room: React.FC = () => {
     { label: '5 oct', start: 36, end: 96 },   // C2–C7
     { label: 'Full',  start: 21, end: 108 },  // A0–C8
   ]
+
+  // Add entries here when placing photos in client/public/backgrounds/
+  const BACKGROUNDS: { id: string; url: string }[] = [
+    { id: 'forest', url: '/backgrounds/forest_background.jpg' },
+    { id: 'hapoel', url: '/backgrounds/Hapoel.jpg' },
+  ]
+
+  const handleBgChange = useCallback((url: string | null) => {
+    setBgUrl(url)
+    room.emitBgChange(url)
+  }, [room])
+
+  const handleBgUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => handleBgChange(reader.result as string)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }, [handleBgChange])
 
   const handleRangeChange = useCallback((start: number, end: number) => {
     setPianoRange({ start, end })
@@ -146,6 +168,7 @@ export const Room: React.FC = () => {
           exportMidi(`${remoteName}-perspective`, studentLocal, studentRemote)
         }
       },
+      onRemoteBgChange: (url) => setBgUrl(url),
     })
     return () => room.leaveRoom()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,6 +237,7 @@ export const Room: React.FC = () => {
           exportMidi(`${remoteName}-perspective`, studentLocal, studentRemote)
         }
       },
+      onRemoteBgChange: (url) => setBgUrl(url),
     })
   }, [handleRemoteNoteOn, handleRemoteNoteOff, handleRemoteSustain, room, recorder, myName, remoteName])
 
@@ -256,6 +280,7 @@ export const Room: React.FC = () => {
     <div
       className="min-h-screen flex flex-col"
       onClick={handleFirstInteraction}
+      style={bgUrl ? { backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
       {/* Header */}
       <div className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 px-4 py-3 flex flex-col gap-2">
@@ -414,6 +439,36 @@ export const Room: React.FC = () => {
           >
             Key labels {showKeyLabels ? 'ON' : 'OFF'}
           </button>
+        )}
+
+        {/* Background picker — teacher only */}
+        {role === 'teacher' && (
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-sm">BG:</span>
+            {/* None */}
+            <button
+              onClick={() => handleBgChange(null)}
+              title="No background"
+              className={`w-7 h-7 rounded-full border-2 bg-gray-900 transition-colors ${!bgUrl ? 'border-blue-400' : 'border-gray-600 hover:border-gray-400'}`}
+            />
+            {/* Predefined thumbnails */}
+            {BACKGROUNDS.map((bg) => (
+              <button
+                key={bg.id}
+                onClick={() => handleBgChange(bg.url)}
+                title={bg.id}
+                className={`w-7 h-7 rounded-full border-2 overflow-hidden transition-colors ${bgUrl === bg.url ? 'border-blue-400' : 'border-gray-600 hover:border-gray-400'}`}
+                style={{ backgroundImage: `url(${bg.url})`, backgroundSize: 'cover' }}
+              />
+            ))}
+            {/* Upload button */}
+            <button
+              onClick={() => bgFileInputRef.current?.click()}
+              title="Upload photo"
+              className="w-7 h-7 rounded-full border-2 border-gray-600 bg-gray-700 text-gray-300 hover:border-blue-400 text-sm flex items-center justify-center transition-colors"
+            >+</button>
+            <input ref={bgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
+          </div>
         )}
 
         {/* Record button — teacher only */}

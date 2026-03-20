@@ -13,6 +13,7 @@ export interface RemoteCallbacks {
   onRemoteRecordStart?: () => void
   onRemoteRecordStop?: () => void
   onRemoteRecordEvents?: (events: RecordedEvent[]) => void
+  onRemoteBgChange?: (url: string | null) => void
 }
 
 export interface UseRoomReturn {
@@ -31,6 +32,7 @@ export interface UseRoomReturn {
   emitRecordStart: () => void
   emitRecordStop: () => void
   emitRecordEvents: (events: RecordedEvent[]) => void
+  emitBgChange: (url: string | null) => void
 }
 
 export function useRoom(): UseRoomReturn {
@@ -123,6 +125,10 @@ export function useRoom(): UseRoomReturn {
       remoteCallbacksRef.current?.onRemoteRecordEvents?.(events)
     })
 
+    socket.on('remote-bg-change', ({ url }: { url: string | null }) => {
+      remoteCallbacksRef.current?.onRemoteBgChange?.(url)
+    })
+
     // If already connected, emit join directly
     if (socket.connected) {
       setIsConnected(true)
@@ -175,6 +181,10 @@ export function useRoom(): UseRoomReturn {
     socketRef.current?.emit('record-events', events)
   }, [])
 
+  const emitBgChange = useCallback((url: string | null) => {
+    socketRef.current?.emit('bg-change', { url })
+  }, [])
+
   return {
     isConnected,
     roomId,
@@ -191,5 +201,6 @@ export function useRoom(): UseRoomReturn {
     emitRecordStart,
     emitRecordStop,
     emitRecordEvents,
+    emitBgChange,
   }
 }

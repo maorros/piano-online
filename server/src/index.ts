@@ -14,6 +14,7 @@ const io = new Server(httpServer, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
+  maxHttpBufferSize: 5 * 1024 * 1024,  // 5MB for background image uploads
 })
 
 interface RoomParticipant {
@@ -112,6 +113,11 @@ io.on('connection', (socket: Socket) => {
   socket.on('record-events', (data: unknown) => {
     if (!currentRoomId) return
     socket.to(currentRoomId).emit('remote-record-events', data)
+  })
+
+  socket.on('bg-change', (data: { url: string | null }) => {
+    if (!currentRoomId) return
+    socket.to(currentRoomId).emit('remote-bg-change', data)
   })
 
   socket.on('disconnect', () => {
