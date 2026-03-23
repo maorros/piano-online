@@ -14,6 +14,7 @@ export interface RemoteCallbacks {
   onRemoteRecordStop?: () => void
   onRemoteRecordEvents?: (events: RecordedEvent[]) => void
   onRemoteBgChange?: (url: string | null) => void
+  onRemoteMidiOutEnabled?: (enabled: boolean) => void
 }
 
 export interface UseRoomReturn {
@@ -33,6 +34,7 @@ export interface UseRoomReturn {
   emitRecordStop: () => void
   emitRecordEvents: (events: RecordedEvent[]) => void
   emitBgChange: (url: string | null) => void
+  emitMidiOutEnabled: (enabled: boolean) => void
 }
 
 export function useRoom(): UseRoomReturn {
@@ -129,6 +131,10 @@ export function useRoom(): UseRoomReturn {
       remoteCallbacksRef.current?.onRemoteBgChange?.(url)
     })
 
+    socket.on('remote-midi-out-enabled', ({ enabled }: { enabled: boolean }) => {
+      remoteCallbacksRef.current?.onRemoteMidiOutEnabled?.(enabled)
+    })
+
     // If already connected, emit join directly
     if (socket.connected) {
       setIsConnected(true)
@@ -185,6 +191,10 @@ export function useRoom(): UseRoomReturn {
     socketRef.current?.emit('bg-change', { url })
   }, [])
 
+  const emitMidiOutEnabled = useCallback((enabled: boolean) => {
+    socketRef.current?.emit('midi-out-enabled', { enabled })
+  }, [])
+
   return {
     isConnected,
     roomId,
@@ -202,5 +212,6 @@ export function useRoom(): UseRoomReturn {
     emitRecordStop,
     emitRecordEvents,
     emitBgChange,
+    emitMidiOutEnabled,
   }
 }

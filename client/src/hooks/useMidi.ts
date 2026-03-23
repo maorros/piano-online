@@ -15,17 +15,22 @@ export interface UseMidiReturn {
   isSupported: boolean
   isConnected: boolean
   devices: MidiDevice[]
+  outputDevices: MidiDevice[]
   connect: (callbacks: MidiCallbacks) => Promise<void>
   updateCallbacks: (callbacks: MidiCallbacks) => void
   disconnect: () => void
+  sendNoteOn: (note: number, velocity: number) => void
+  sendNoteOff: (note: number) => void
 }
 
 export function useMidi(): UseMidiReturn {
   const isSupported = typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator
   const [isConnected, setIsConnected] = useState(false)
   const [devices, setDevices] = useState<MidiDevice[]>([])
+  const [outputDevices, setOutputDevices] = useState<MidiDevice[]>([])
   const midiAccessRef = useRef<MIDIAccess | null>(null)
   const callbacksRef = useRef<MidiCallbacks | null>(null)
+  const outputsRef = useRef<MIDIOutput[]>([])
 
   const handleMidiMessage = useCallback((event: MIDIMessageEvent) => {
     const callbacks = callbacksRef.current
@@ -58,6 +63,15 @@ export function useMidi(): UseMidiReturn {
       input.onmidimessage = handleMidiMessage
     })
     setDevices(inputList)
+
+    const outputList: MidiDevice[] = []
+    const outputs: MIDIOutput[] = []
+    access.outputs.forEach((output) => {
+      outputList.push({ id: output.id, name: output.name ?? `MIDI Output ${output.id}` })
+      outputs.push(output)
+    })
+    setOutputDevices(outputList)
+    outputsRef.current = outputs
   }, [handleMidiMessage])
 
   const connect = useCallback(async (callbacks: MidiCallbacks) => {
@@ -100,9 +114,23 @@ export function useMidi(): UseMidiReturn {
     }
     midiAccessRef.current = null
     callbacksRef.current = null
+    outputsRef.current = []
     setIsConnected(false)
     setDevices([])
+    setOutputDevices([])
   }, [])
 
-  return { isSupported, isConnected, devices, connect, updateCallbacks, disconnect }
+  const sendNoteOn = useCallback((note: number, velocity: number) => {
+    outputsRef.current.forEach((output) => {
+      output.send([0x90, note, velocity])
+    })
+  }, [])
+
+  const sendNoteOff = useCallback((note: number) => {
+    outputsRef.current.forEach((output) => {
+      output.send([0x80, note, 0])
+    })
+  }, [])
+
+  return { isSupported, isConnected, devices, outputDevices, connect, updateCallbacks, disconnect, sendNoteOn, sendNoteOff }
 }

@@ -34,6 +34,7 @@ export const Room: React.FC = () => {
   const pendingTeacherEventsRef = useRef<RecordedEvent[] | null>(null)
   const [bgUrl, setBgUrl] = useState<string | null>(null)
   const bgFileInputRef = useRef<HTMLInputElement>(null)
+  const [midiOutEnabled, setMidiOutEnabled] = useState(false)
 
   const remoteRole = role === 'teacher' ? 'student' : 'teacher'
   const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
@@ -123,18 +124,20 @@ export const Room: React.FC = () => {
   const handleRemoteNoteOn = useCallback((note: number, velocity: number) => {
     audio.playNote(note, velocity)
     recorder.recordEvent('on', note, velocity, 'remote')
+    if (midiOutEnabled) midi.sendNoteOn(note, velocity)
     setRemoteActiveNotes((prev) => new Set(prev).add(note))
-  }, [audio, recorder])
+  }, [audio, recorder, midiOutEnabled, midi])
 
   const handleRemoteNoteOff = useCallback((note: number) => {
     audio.stopNote(note)
     recorder.recordEvent('off', note, 0, 'remote')
+    if (midiOutEnabled) midi.sendNoteOff(note)
     setRemoteActiveNotes((prev) => {
       const next = new Set(prev)
       next.delete(note)
       return next
     })
-  }, [audio, recorder])
+  }, [audio, recorder, midiOutEnabled, midi])
 
   const handleRemoteSustain = useCallback((value: number) => {
     audio.setSustain(value)
@@ -169,6 +172,7 @@ export const Room: React.FC = () => {
         }
       },
       onRemoteBgChange: (url) => setBgUrl(url),
+      onRemoteMidiOutEnabled: (enabled) => setMidiOutEnabled(enabled),
     })
     return () => room.leaveRoom()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,6 +242,7 @@ export const Room: React.FC = () => {
         }
       },
       onRemoteBgChange: (url) => setBgUrl(url),
+      onRemoteMidiOutEnabled: (enabled) => setMidiOutEnabled(enabled),
     })
   }, [handleRemoteNoteOn, handleRemoteNoteOff, handleRemoteSustain, room, recorder, myName, remoteName])
 
@@ -318,8 +323,13 @@ export const Room: React.FC = () => {
             {midi.isSupported && (
               <div className={`text-sm ${midi.isConnected && midi.devices.length > 0 ? 'text-purple-400' : 'text-gray-500'}`}>
                 {midi.isConnected && midi.devices.length > 0
-                  ? `MIDI: ${midi.devices[0].name}`
+                  ? `MIDI in: ${midi.devices[0].name}`
                   : 'No MIDI device'}
+              </div>
+            )}
+            {midi.isSupported && midi.isConnected && midi.outputDevices.length > 0 && (
+              <div className="text-sm text-purple-300">
+                MIDI out: {midi.outputDevices[0].name}
               </div>
             )}
           </div>
@@ -469,6 +479,24 @@ export const Room: React.FC = () => {
             >+</button>
             <input ref={bgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
           </div>
+        )}
+
+        {/* MIDI out toggle — teacher only */}
+        {role === 'teacher' && (
+          <button
+            onClick={() => {
+              const next = !midiOutEnabled
+              setMidiOutEnabled(next)
+              room.emitMidiOutEnabled(next)
+            }}
+            className={`text-xs px-3 py-1 rounded-lg transition-colors ${
+              midiOutEnabled
+                ? 'bg-purple-600/40 text-purple-300 hover:bg-purple-600/60'
+                : 'bg-gray-700 text-gray-500 hover:bg-gray-600'
+            }`}
+          >
+            MIDI out {midiOutEnabled ? 'ON' : 'OFF'}
+          </button>
         )}
 
         {/* Record button — teacher only */}

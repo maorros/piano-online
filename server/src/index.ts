@@ -120,6 +120,11 @@ io.on('connection', (socket: Socket) => {
     socket.to(currentRoomId).emit('remote-bg-change', data)
   })
 
+  socket.on('midi-out-enabled', (data: { enabled: boolean }) => {
+    if (!currentRoomId) return
+    socket.to(currentRoomId).emit('remote-midi-out-enabled', data)
+  })
+
   socket.on('disconnect', () => {
     console.log(`[disconnect] ${socket.id}`)
     if (currentRoomId) {
