@@ -35,6 +35,7 @@ export const Room: React.FC = () => {
   const [bgUrl, setBgUrl] = useState<string | null>(null)
   const bgFileInputRef = useRef<HTMLInputElement>(null)
   const [midiOutEnabled, setMidiOutEnabled] = useState(false)
+  const [muted, setMuted] = useState(false)
 
   const remoteRole = role === 'teacher' ? 'student' : 'teacher'
   const remoteName = room.remoteParticipants[0]?.name ?? (remoteRole === 'teacher' ? 'Teacher' : 'Student')
@@ -87,8 +88,8 @@ export const Room: React.FC = () => {
 
   // Wire up volume control
   useEffect(() => {
-    audio.setVolume(volume)
-  }, [volume, audio])
+    audio.setVolume(muted ? -Infinity : volume)
+  }, [volume, muted, audio])
 
   // ── Local note handlers ────────────────────────────────────────────
   const handleLocalNoteOn = useCallback((midi: number, velocity: number = 80) => {
@@ -404,7 +405,17 @@ export const Room: React.FC = () => {
             onChange={(e) => setVolume(Number(e.target.value))}
             className="w-28 accent-blue-500"
           />
-          <span className="text-gray-400 text-sm w-10">{volume}dB</span>
+          <span className="text-gray-400 text-sm w-10">{muted ? 'Muted' : `${volume}dB`}</span>
+          <button
+            onClick={() => setMuted((m) => !m)}
+            className={`text-xs px-2 py-1 rounded-lg transition-colors ${
+              muted
+                ? 'bg-red-700/60 text-red-300 hover:bg-red-700/80'
+                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+            }`}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
         </div>
 
         {/* Sustain indicator */}
